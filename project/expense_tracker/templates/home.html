@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home | Expense Tracker</title>
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            margin: 0;
+            background-color: #F0F0D7;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 40px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+
+        .navbar .admin-panel {
+            flex-grow: 1;  
+            display: flex;
+            justify-content: center;
+        }
+        .navbar .admin-panel a{
+            color: #F93827;
+            font-size: 18px;
+        }
+        
+
+        .navbar .right {
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar .username {
+            font-size: 16px;
+            color: #333;
+            margin-right: 20px;
+        }
+
+        .navbar .logout-btn {
+            padding: 8px 16px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .navbar .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        table th, table td {
+            padding: 14px;
+            border: 1px solid black;
+            font-size: 18px;
+        }
+        table th{
+            font-size: 20px;
+        }
+
+        table {
+            border: 1px solid black;
+            border-collapse: collapse;
+            width: 70%;
+            margin: auto;
+        }
+
+        button {
+            padding: 14px 18px;
+            font-size:16px;
+        }
+
+        button {
+            text-decoration: none;
+            color: black;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        canvas {
+            margin: 30px auto;
+            display: block;
+        }
+
+        .total-amount,.add-expense-btn {
+            font-size: 18px;
+            margin-top: 10px;
+            text-align: left;
+        }
+        .total-container{
+            width:70%;
+            margin: auto;
+            display:flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1{
+            margin: 20px 0;
+        }
+        h2{
+            font-size:40px;  
+        }
+        h3{
+            text-align: left;
+            width: 70%;
+            margin: 0px auto 20px auto;
+        }
+        /* Modal Background */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4); /* Semi-transparent background */
+            overflow: auto;
+            padding-top: 60px;
+        }
+
+        /* Modal Content Box */
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            max-width: 500px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        /* Close Button */
+        .close-button {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            cursor: pointer;
+        }
+
+        /* Hover effect for the close button */
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Alert Styling */
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            border-color: #f5c2c7;
+            color: #842029;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Navbar start -->
+    <div class="navbar">
+        <div class="logo">Expense Tracker</div>
+    
+        
+        {% if user.is_staff %}
+            <div class="admin-panel">
+                <a href="{% url 'admin:index' %}">Admin Panel</a>
+            </div>
+        {% endif %}
+    
+        <div class="right">
+            <div class="username">{{ user.username }}</div>
+            <form method="POST" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Navbar End -->
+    <!-- Display messages (success or error) -->
+    {% if messages %}
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div class="modal-body">
+                {% for message in messages %}
+                    {% if message.tags == 'error' %}
+                        <div class="alert alert-error">
+                            {{ message }}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success">
+                            {{ message }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+
+
+    
+    <!-- Expense Table start -->
+    <h1>Expense Table</h1>
+    <h3>    
+            Duration: {{ first_date|date:"F d, Y" }} - {{ last_date|date:"F d, Y" }}
+    </h3>
+    
+    
+
+    <!-- Search Section -->
+    <div style="width: 70%; margin: auto; text-align: left; margin-bottom: 20px;">
+        <form method="GET" action="{% url 'home' %}">
+            <input 
+                type="text" 
+                name="title" 
+                placeholder="Search by title..." 
+                style="padding: 10px; font-size: 16px; width: 60%; margin-right: 10px; border: 1px solid #ccc; border-radius: 5px;"
+                value="{{ request.GET.title|default_if_none:'' }}">
+            <button 
+                type="submit" 
+                style="padding: 10px 20px; font-size: 16px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Search
+            </button>
+        </form>
+    </div>
+    
+
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Amount</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.title }}</td>
+                    <td>{{ expense.amount }}</td>
+                    <td>{{ expense.category }}</td>
+                    <td>{{ expense.description }}</td>
+                    <td>{{ expense.date }}</td>
+                    <td>
+                        <a href="{% url 'edit_item' expense.id %}">Edit</a> /
+                        <a href="{% url 'delete_item' expense.id %}">Delete</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6">No expenses found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>        
+    </table>
+    <!-- Expense Table End -->
+
+    <div class="total-container">
+        <div class="add-expense-btn">
+            <a href="{% url 'add_items' %}">
+                <button>Add New Expense</button>
+            </a>
+        </div>
+        
+        <div class="total-amount">
+            <strong>Total Amount: Rs. {{ total_amount|floatformat:2 }}</strong> 
+        </div>
+    </div>
+
+    <!-- Pie Chart Section -->
+    <h2>Data In Pie-Chart</h2>
+    <canvas id="expenseChart" width="400" height="400"></canvas>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var modal = document.getElementById("messageModal");
+            var closeButton = document.querySelector(".close-button");
+    
+            // Show the modal if there are messages
+            if (modal && modal.style.display !== "none") {
+                modal.style.display = "block"; // Show the modal
+            }
+    
+            // Close the modal when the close button is clicked
+            closeButton.addEventListener("click", function() {
+                modal.style.display = "none"; // Hide the modal
+            });
+    
+            // Close the modal when clicking outside the modal content
+            window.addEventListener("click", function(event) {
+                if (event.target === modal) {
+                    modal.style.display = "none"; // Hide the modal
+                }
+            });
+        });
+        const categories = {{ categories|safe }};  // Labels for the chart
+        const amounts = {{ amounts|safe }};        // Data for the chart
+
+        // Chart.js rendering
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        const expenseChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: categories, 
+                datasets: [{
+                    label: 'Expenses by Category',
+                    data: amounts, 
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)',
+                        'rgba(255, 159, 64, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                const data = tooltipItem.dataset.data; 
+                                const total = data.reduce((sum, value) => sum + value, 0); 
+                                const value = data[tooltipItem.dataIndex]; 
+                                const percentage = ((value / total) * 100).toFixed(2); 
+                                return `${tooltipItem.label}: Rs ${value} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top', // Display legend at the top
+                    }
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
